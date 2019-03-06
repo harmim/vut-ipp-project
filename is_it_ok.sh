@@ -202,8 +202,7 @@ for SCRIPT in "${REQUIRED_SCRIPTS[@]}" "${NON_REQUIRED_SCRIPTS[@]}"; do
     echo -n "  Checking $SCRIPT: "
     EXT=`echo $SCRIPT | cut -d . -f 2`
     if [[ "$EXT" = "php" ]]; then
-      command -v php7.3
-      if [[ $? -eq 0 ]]; then
+      if type php7.3 > /dev/null 2>&1; then
         php7.3 $SCRIPT --help >> $LOG 2>&1
       else
         php $SCRIPT --help >> $LOG 2>&1
@@ -255,7 +254,7 @@ if [[ -f rozsireni ]]; then
   diff rozsireni rozsireni.lf >> $LOG 2>&1
   RETCODE=$?
   if [[ $RETCODE = "0" ]]; then
-    UNKNOWN=`cat rozsireni | grep -v -E -e "^(STATP|FLOAT|STACK|STATI|FILES)$" | wc -l`
+    UNKNOWN=`cat rozsireni | grep -v -E -e "^(STATP|FLOAT|STACK|STATI|FILES)$" | wc -l | xargs`
     if [[ $UNKNOWN = "0" ]]; then
       echo_color green "OK"
     else

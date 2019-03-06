@@ -8,6 +8,7 @@ IS_IT_OK_SCRIPT := ./is_it_ok.sh
 TASK := 0
 
 SRCS := php/*.php python/*.py
+DOCS := doc1/readme1.pdf doc2/readme2.pdf
 
 
 .PHONY: pack
@@ -15,7 +16,7 @@ pack: clean $(PACK)
 
 $(PACK):
 	mkdir -p $(PACK_TMP_DIR)
-	cp $(SRCS) $(PACK_TMP_DIR)
+	cp $(SRCS) $(DOCS) rozsireni $(PACK_TMP_DIR)
 	tar -czf $@ -C $(PACK_TMP_DIR) .
 	rm -rf $(PACK_TMP_DIR)
 
