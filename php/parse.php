@@ -10,4 +10,5 @@ declare(strict_types=1);
  * @author Dominik Harmim <xharmi00@stud.fit.vutbr.cz>
  */
 
+
 exit(0);
