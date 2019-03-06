@@ -20,7 +20,7 @@ SchemaValidation = 0
 # Fast - 0 Normal - 1 Slow - 2 Full - 3
 CompareLevel = 3
 
-# Off - 0  On - 1 
+# Off - 0  On - 1
 CaseSensitive = 1
 
 # Off - 0 On - 1
@@ -32,10 +32,10 @@ Encoding = UTF-8
 # XML version (default 1.0)
 XMLVersion = 1.0
 
-# Insert xml comments to highlight differences Off - 0 On - 1 
+# Insert xml comments to highlight differences Off - 0 On - 1
 InsertComments = 1
 
-# Ignore attributes Off - 0 On - 1 
+# Ignore attributes Off - 0 On - 1
 IgnoreAttributes  = 0
 
 # Ignore content of the XML elements Off - 0 On - 1
@@ -45,12 +45,11 @@ IgnoreValues = 0
 #EntireElement=SuperCoach_s>SuperCoach
 
 # Ignoring elements
-# You can specify a full name of an element including names of parents separated by ‘>’ (recommended)
-# or only the name of the element. 
+# You can specify a full name of an element including names of parents separated by â€˜>â€™ (recommended)
+# or only the name of the element.
 # Attention! The names of the elements are case sensitive
 #IgnoreElement = root>parent>element>sub-element
 
 # Key element and attributes
 #KeyAttribute = books>book|uuid
 #KeyElement = books>book>name
-
