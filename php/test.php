@@ -11,4 +11,7 @@ declare(strict_types=1);
  */
 
 
-exit(0);
+require __DIR__ . '/initialization.php';
+
+
+exit(ReturnCodes::SUCCESS);
