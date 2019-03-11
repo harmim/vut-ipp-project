@@ -48,7 +48,7 @@ final class Utils
 		if ($arguments) {
 			self::error(
 				ReturnCodes::INVALID_PARAMETER,
-				'If parameter --help is used, no other parameters are allowed.'
+				"If parameter '--help' is used, no other parameters are allowed."
 			);
 		}
 

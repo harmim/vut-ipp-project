@@ -4,7 +4,7 @@ PACK := xharmi00.tgz
 PACK_TMP_DIR := pack_tmp
 
 IS_IT_OK_DIR := is_it_ok_test
-IS_IT_OK_SCRIPT := ./is_it_ok.sh
+IS_IT_OK_SCRIPT := is_it_ok.sh
 TASK := 0
 
 SRCS := php/*.php python/*.py
@@ -26,12 +26,12 @@ clean_pack:
 
 
 .PHONY: is_it_ok
-is_it_ok: $(PACK) $(IS_IT_OK_SCRIPT) clean_is_it_ok
-	chmod +x $(IS_IT_OK_SCRIPT)
+is_it_ok: $(IS_IT_OK_SCRIPT) $(PACK) clean_is_it_ok
+	chmod +x $<
 ifeq ($(TASK), 0)
-	$(IS_IT_OK_SCRIPT) $(PACK) $(IS_IT_OK_DIR)
+	./$< $(PACK) $(IS_IT_OK_DIR)
 else
-	$(IS_IT_OK_SCRIPT) $(PACK) $(IS_IT_OK_DIR) $(TASK)
+	./$< $(PACK) $(IS_IT_OK_DIR) $(TASK)
 endif
 
 .PHONY: clean_is_it_ok

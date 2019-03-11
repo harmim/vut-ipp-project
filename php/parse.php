@@ -16,14 +16,14 @@ require __DIR__ . '/initialization.php';
 
 // parse input arguments
 $arguments = ArgumentProcessor::process($argv, [
-	'help' => true,
+	'help' => [],
 	'stats' => [
 		'value' => true,
 	],
-	'loc' => true,
-	'comments' => true,
-	'labels' => true,
-	'jumps' => true,
+	'loc' => [],
+	'comments' => [],
+	'labels' => [],
+	'jumps' => [],
 ]);
 
 if (isset($arguments['help'])) {
@@ -37,7 +37,7 @@ if (isset($arguments['help'])) {
 		usage: php parse.php [--help] [--stats=file] [--loc] [--comments] [--labels] [--jumps]  
 
 		  `--help` prints help to standard output.
-		  `--stats=file` prints statistics to file.
+		  `--stats=file` prints statistics to the file.
 		  `--loc` prints number of lines with instructions to statistics.
 		  `--comments` prints number of lines with comments to statistics.
 		  `--labels` prints number of labels in code to statistics.
@@ -55,7 +55,7 @@ if (isset($arguments['help'])) {
 		|| isset($arguments['jumps'])
 	)
 ) {
-	Utils::error(ReturnCodes::INVALID_PARAMETER, 'Input parameter --stats is missing.');
+	Utils::error(ReturnCodes::INVALID_PARAMETER, "Input parameter '--stats' is missing.");
 }
 
 

@@ -20,9 +20,9 @@ final class ArgumentProcessor
 	 * Process input arguments ($argv).
 	 *
 	 * @param array $arguments Input arguments ($argv).
-	 * @param array $options Allowed options. ['option' => true, 'option2' => ['value' => true], ...].
+	 * @param array $options Allowed options. ['option1' => [], 'option2' => ['value' => true], ...].
 	 * @return array Processed input arguments.
-	 *               ['option' => ['position' => 1], 'option2' => ['position' => 2, 'value' => 'value']]
+	 *               ['option1' => ['position' => 1], 'option2' => ['position' => 2, 'value' => 'value'], ...]
 	 */
 	public static function process(array $arguments, array $options): array
 	{

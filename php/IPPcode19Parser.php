@@ -18,13 +18,13 @@ use LSS\Array2XML;
  */
 final class IPPcode19Parser
 {
-	// regular expressions
+	// patterns
 	private const
 		COMMENT = '\s*(#.*)?$',
 		TYPE_NIL = '(?:(nil)@(nil))',
 		TYPE_INT = '(?:(int)@((?:\+|\-)?\d+))',
 		TYPE_BOOL = '(?:(bool)@(true|false))',
-		TYPE_STRING = '(?:(string)@((?:[^\s#\\\\]|\\\\\d{3})*))',
+		TYPE_STRING = '(?:(string)@((?:[^\s#\\\\]|(?:\\\\\d{3}))*))',
 		CONST =
 			'(?:' . self::TYPE_NIL . '|' . self::TYPE_INT . '|' . self::TYPE_BOOL . '|' . self::TYPE_STRING . ')',
 		IDENTIFIER_SPECIAL_CHARS = '_\-\$&%\*!\?',
@@ -35,11 +35,43 @@ final class IPPcode19Parser
 		SYMB = '(' . self::CONST . '|' . self::VAR . ')',
 		LABEL = '(' . self::IDENTIFIER . ')';
 
-	// opcodes
-	private const OPCODES = [
-		'MOVE', 'CREATEFRAME', 'PUSHFRAME', 'POPFRAME', 'DEFVAR', 'CALL', 'RETURN', 'PUSHS', 'POPS', 'ADD', 'SUB',
-		'MUL', 'IDIV', 'LT', 'GT', 'EQ', 'AND', 'OR', 'NOT', 'INT2CHAR', 'STRI2INT', 'READ', 'WRITE', 'CONCAT',
-		'STRLEN', 'GETCHAR', 'SETCHAR', 'TYPE', 'LABEL', 'JUMP', 'JUMPIFEQ', 'JUMPIFNEQ', 'EXIT', 'DPRINT', 'BREAK',
+	// instructions and theirs operands
+	private const INSTRUCTIONS = [
+		'MOVE' => ['var', 'symb'],
+		'CREATEFRAME' => [],
+		'PUSHFRAME' => [],
+		'POPFRAME' => [],
+		'DEFVAR' => ['var'],
+		'CALL' => ['label'],
+		'RETURN' => [],
+		'PUSHS' => ['symb'],
+		'POPS' => ['var'],
+		'ADD' => ['var', 'symb', 'symb'],
+		'SUB' => ['var', 'symb', 'symb'],
+		'MUL' => ['var', 'symb', 'symb'],
+		'IDIV' => ['var', 'symb', 'symb'],
+		'LT' => ['var', 'symb', 'symb'],
+		'GT' => ['var', 'symb', 'symb'],
+		'EQ' => ['var', 'symb', 'symb'],
+		'AND' => ['var', 'symb', 'symb'],
+		'OR' => ['var', 'symb', 'symb'],
+		'NOT' => ['var', 'symb'],
+		'INT2CHAR' => ['var', 'symb'],
+		'STRI2INT' => ['var', 'symb', 'symb'],
+		'READ' => ['var', 'type'],
+		'WRITE' => ['symb'],
+		'CONCAT' => ['var', 'symb', 'symb'],
+		'STRLEN' => ['var', 'symb'],
+		'GETCHAR' => ['var', 'symb', 'symb'],
+		'SETCHAR' => ['var', 'symb', 'symb'],
+		'TYPE' => ['var', 'symb'],
+		'LABEL' => ['label'],
+		'JUMP' => ['label'],
+		'JUMPIFEQ' => ['label', 'symb', 'symb'],
+		'JUMPIFNEQ' => ['label', 'symb', 'symb'],
+		'EXIT' => ['symb'],
+		'DPRINT' => ['symb'],
+		'BREAK' => [],
 	];
 
 
@@ -51,11 +83,10 @@ final class IPPcode19Parser
 	 */
 	public static function parse(array $arguments): DOMDocument
 	{
-		$statsFile = isset($arguments['stats']) ? self::openStatsFile($arguments['stats']['value']) : null;
+		$statsFile = isset($arguments['stats']['value']) ? self::openStatsFile($arguments['stats']['value']) : null;
 		$lineNumber = $loc = $comments = $labels = $jumps = 0;
 		$definedLabels = [];
 		$header = false;
-
 		$xml = [
 			'@attributes' => [
 				'language' => 'IPPcode19',
@@ -87,243 +118,83 @@ final class IPPcode19Parser
 			}
 
 			$invalidOpcode = true;
-			foreach (self::OPCODES as $opcode) {
+			foreach (self::INSTRUCTIONS as $opcode => $operands) {
 				if (preg_match('~^\s*' . $opcode . '([^#]*)' . self::COMMENT . '~ui', $line, $m)) {
 					$invalidOpcode = false;
+					$instruction = [];
 
 					if (isset($m[2])) {
 						$comments++;
 					}
 
-					$instruction = [
-						'@attributes' => [
-							'order' => $loc + 1,
-							'opcode' => $opcode,
-						],
-					];
+					$operandsPattern = '~^';
+					foreach ($operands as $operand) {
+						switch ($operand) {
+							case 'var':
+								$operandsPattern .= '\s+' . self::VAR;
+								break;
 
-					switch ($opcode) {
-						// without operands
-						case 'CREATEFRAME':
-						case 'PUSHFRAME':
-						case 'POPFRAME':
-						case 'RETURN':
-						case 'BREAK':
-							if (!preg_match('~^\s*$~u', $m[1])) {
-								self::parseError($lineNumber);
-							}
+							case 'type':
+								$operandsPattern .= '\s+' . self::TYPE;
+								break;
 
-							break;
+							case 'symb':
+								$operandsPattern .= '\s+' . self::SYMB;
+								break;
 
-						// <var> <symb>
-						case 'MOVE':
-						case 'INT2CHAR':
-						case 'STRLEN':
-						case 'TYPE':
-							if (!preg_match('~^\s+' . self::VAR . '\s+' . self::SYMB . '\s*$~u', $m[1], $mOperands)) {
-								self::parseError($lineNumber);
-							}
-							self::removeEmptyStrings($mOperands);
+							case 'label':
+								$operandsPattern .= '\s+' . self::LABEL;
+								break;
 
-							$instruction['arg1'] = [
+							default:
+								break;
+						}
+					}
+					$operandsPattern .= '\s*$~u';
+
+					if (!preg_match($operandsPattern, $m[1], $mOperands)) {
+						self::parseError($lineNumber);
+					}
+					self::removeEmptyStrings($mOperands);
+
+					$argNumber = $mIndex = 0;
+					foreach ($operands as $operand) {
+						$argIndex = 'arg' . ++$argNumber;
+
+						if ($operand === 'symb') {
+							$isVar = self::isVar($mOperands[++$mIndex]);
+							$instruction[$argIndex] = [
 								'@attributes' => [
-									'type' => 'var',
+									'type' => $isVar ? 'var' : $mOperands[++$mIndex],
 								],
-								'@value' => $mOperands[1],
+								'@value' => $isVar ? $mOperands[$mIndex] : $mOperands[++$mIndex],
 							];
 
-							$isArg2Var = self::isVar($mOperands[2]);
-							$instruction['arg2'] = [
+						} else {
+							$instruction[$argIndex] = [
 								'@attributes' => [
-									'type' => $isArg2Var ? 'var' : $mOperands[3],
+									'type' => $operand,
 								],
-								'@value' => $isArg2Var ? $mOperands[2] : $mOperands[4],
+								'@value' => $mOperands[++$mIndex],
 							];
-
-							break;
-
-						// <var>
-						case 'DEFVAR':
-						case 'POPS':
-							if (!preg_match('~^\s+' . self::VAR . '\s*$~u', $m[1], $mOperands)) {
-								self::parseError($lineNumber);
-							}
-
-							$instruction['arg1'] = [
-								'@attributes' => [
-									'type' => 'var',
-								],
-								'@value' => $mOperands[1],
-							];
-
-							break;
-
-						// <label>
-						case 'CALL':
-						case 'LABEL':
-						case 'JUMP':
-							if (!preg_match('~^\s+' . self::LABEL . '\s*$~u', $m[1], $mOperands)) {
-								self::parseError($lineNumber);
-							}
-
-							$instruction['arg1'] = [
-								'@attributes' => [
-									'type' => 'label',
-								],
-								'@value' => $mOperands[1],
-							];
-
-							if ($opcode === 'LABEL' && empty($definedLabels[$m[1]])) {
-								$definedLabels[$m[1]] = true;
-								$labels++;
-							}
-
-							break;
-
-						// <symb>
-						case 'PUSHS':
-						case 'WRITE':
-						case 'EXIT':
-						case 'DPRINT':
-							if (!preg_match('~^\s+' . self::SYMB . '\s*$~u', $m[1], $mOperands)) {
-								self::parseError($lineNumber);
-							}
-							self::removeEmptyStrings($mOperands);
-
-							$isArg1Var = self::isVar($mOperands[1]);
-							$instruction['arg1'] = [
-								'@attributes' => [
-									'type' => $isArg1Var ? 'var' : $mOperands[2],
-								],
-								'@value' => $isArg1Var ? $mOperands[1] : $mOperands[3],
-							];
-
-							break;
-
-						// <var> <symb1> <symb2>
-						case 'ADD':
-						case 'SUB':
-						case 'MUL':
-						case 'IDIV':
-						case 'LT':
-						case 'GT':
-						case 'EQ':
-						case 'AND':
-						case 'OR':
-						case 'NOT':
-						case 'STRI2INT':
-						case 'CONCAT':
-						case 'GETCHAR':
-						case 'SETCHAR':
-							if (
-								!preg_match(
-									'~^\s+' . self::VAR . '\s+' . self::SYMB . '\s+' . self::SYMB . '\s*$~u',
-									$m[1],
-									$mOperands
-								)
-							) {
-								self::parseError($lineNumber);
-							}
-							self::removeEmptyStrings($mOperands);
-
-							$instruction['arg1'] = [
-								'@attributes' => [
-									'type' => 'var',
-								],
-								'@value' => $mOperands[1],
-							];
-
-							$isArg2Var = self::isVar($mOperands[2]);
-							$instruction['arg2'] = [
-								'@attributes' => [
-									'type' => $isArg2Var ? 'var' : $mOperands[3],
-								],
-								'@value' => $isArg2Var ? $mOperands[2] : $mOperands[4],
-							];
-
-							$isArg3Var = self::isVar($mOperands[$isArg2Var ? 3 : 5]);
-							$instruction['arg3'] = [
-								'@attributes' => [
-									'type' => $isArg3Var ? 'var' : $mOperands[$isArg2Var ? 4 : 6],
-								],
-								'@value' => $isArg3Var ?
-									$mOperands[$isArg2Var ? 3 : 5]
-									: $mOperands[$isArg2Var ? 5 : 7],
-							];
-
-							break;
-
-						// <var> <type>
-						case 'READ':
-							if (!preg_match('~^\s+' . self::VAR . '\s+' . self::TYPE . '\s*$~u', $m[1], $mOperands)) {
-								self::parseError($lineNumber);
-							}
-
-							$instruction['arg1'] = [
-								'@attributes' => [
-									'type' => 'var',
-								],
-								'@value' => $mOperands[1],
-							];
-
-							$instruction['arg2'] = [
-								'@attributes' => [
-									'type' => 'type',
-								],
-								'@value' => $mOperands[2],
-							];
-
-							break;
-
-						// <label> <symb1> <symb2>
-						case 'JUMPIFEQ':
-						case 'JUMPIFNEQ':
-							if (
-								!preg_match(
-									'~^\s+' . self::LABEL . '\s+' . self::SYMB . '\s+' . self::SYMB . '\s*$~u',
-									$m[1],
-									$mOperands
-								)
-							) {
-								self::parseError($lineNumber);
-							}
-							self::removeEmptyStrings($mOperands);
-
-							$instruction['arg1'] = [
-								'@attributes' => [
-									'type' => 'label',
-								],
-								'@value' => $mOperands[1],
-							];
-
-							$isArg2Var = self::isVar($mOperands[2]);
-							$instruction['arg2'] = [
-								'@attributes' => [
-									'type' => $isArg2Var ? 'var' : $mOperands[3],
-								],
-								'@value' => $isArg2Var ? $mOperands[2] : $mOperands[4],
-							];
-
-							$isArg3Var = self::isVar($mOperands[$isArg2Var ? 3 : 5]);
-							$instruction['arg3'] = [
-								'@attributes' => [
-									'type' => $isArg3Var ? 'var' : $mOperands[$isArg2Var ? 4 : 6],
-								],
-								'@value' => $isArg3Var ?
-									$mOperands[$isArg2Var ? 3 : 5]
-									: $mOperands[$isArg2Var ? 5 : 7],
-							];
-
-							break;
-
-						default:
-							break;
+						}
 					}
 
+					$instruction['@attributes'] = [
+						'order' => ++$loc,
+						'opcode' => $opcode,
+					];
 					$xml['instruction'][] = $instruction;
-					$loc++;
+
 					if (in_array($opcode, ['CALL', 'RETURN', 'JUMP', 'JUMPIFEQ', 'JUMPIFNEQ'], true)) {
 						$jumps++;
+
+					} elseif ($opcode === 'LABEL') {
+						$label = trim($m[1]);
+						if (empty($definedLabels[$label])) {
+							$definedLabels[$label] = true;
+							$labels++;
+						}
 					}
 
 					break;
@@ -365,7 +236,7 @@ final class IPPcode19Parser
 
 
 	/**
-	 * Writes statistics to file.
+	 * Writes statistics to a file.
 	 *
 	 * @param resource|null $statsFile Handle to opened file for statistics.
 	 * @param int $loc Number of lines with instructions.
@@ -444,10 +315,10 @@ final class IPPcode19Parser
 
 
 	/**
-	 * Determines whether given operand is variable.
+	 * Determines whether given operand is a variable.
 	 *
 	 * @param string $operand Operand to be parsed.
-	 * @return bool True if operand is variable, false otherwise.
+	 * @return bool True if operand is a variable, false otherwise.
 	 */
 	private static function isVar(string $operand): bool
 	{
@@ -461,7 +332,7 @@ final class IPPcode19Parser
 	 * @param array $array An array for removing empty strings.
 	 * @return void
 	 */
-	public static function removeEmptyStrings(array &$array): void
+	private static function removeEmptyStrings(array &$array): void
 	{
 		$array = array_values(array_filter($array, function (string $string): bool {
 			return $string !== '';
