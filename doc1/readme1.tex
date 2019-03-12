@@ -1,12 +1,13 @@
 % Author: Dominik Harmim <xharmi00@stud.fit.vutbr.cz>
 
-\documentclass[10pt, a4paper]{article}
+\documentclass[11pt, a4paper]{article}
 
 \usepackage[czech]{babel}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{times}
 \usepackage[left=2cm, top=3cm, text={17cm, 24cm}]{geometry}
+\usepackage[unicode, colorlinks, hypertexnames=false, citecolor=red]{hyperref}
 
 \begin{document}
     {\parindent 0pt \Large
@@ -14,4 +15,60 @@
         Jméno a~příjmení: Dominik Harmim \\
         Login: \texttt{xharmi00}
     }
+    
+    
+    \section{Analýza zdrojového kódu IPPcode19}
+    
+    Analýza zdrojového kódu IPPcode19 je implementována ve třídě
+    \texttt{IPPcode19Parser}. Zdrojový kód je čten po řádcích ze
+    standardního vstupu. Jednotlivé řádky jsou testovány PCRE regulárními
+    výrazy, čímž jsou kontrolovány lexikální a~syntaktická pravidla jazyka
+    IPPcode19. U~každé instrukce se pomocí regulárních výrazů kontrolují počty
+    a~typy operandů (proměnná, konstanta, návěští, typ). Hodnoty konstant
+    a~použité identifikátory se taktéž analyzují. Před uvedením hlavičky 
+    \texttt{.IPPcode19} je možný výskyt prázdných řádků a~komentářů.
+    
+    Pro generování XML reprezentace zdrojového kódu IPPcode19
+    byl použit nástroj \texttt{Array2XML}, který převádí pole v~jazyce PHP
+    do formátu XML.
+    
+    
+    \section{Zpracování parametrů příkazové řádky}
+    
+    Zpracování parametrů příkazové řádky je implementováno ve třídě
+    \texttt{ArgumentProcessor}. Je zde implementována metoda \texttt{process},
+    která přijímá vstupní argumenty spuštěného skriptu (\texttt{\$argv}) 
+    a~na základě přípustných parametrů skriptu tyto argumenty zpracuje
+    a~vrací pole zadaných parametrů indexované podle jejich názvu 
+    i~s~případnými zadanými hodnotami tak, aby s~nimi bylo dále možné
+    jednoduše pracovat. V~případě nepovolených parametrů metoda ukončí
+    skript s~návratovým kódem 10.
+    
+    
+    \section{Implementovaná rozšíření}
+    
+    V~rámci 1.~úlohy bylo implementováno rozšíření pro sbírání 
+    statistik\,--\,\textbf{STATP}, viz sekce \ref{sec:statp}.
+    
+    \subsection{STATP}
+    \label{sec:statp}
+    
+    Pokud je skriptu \texttt{parse.php} předán parametr \texttt{-{}-stats=file},
+    tak jsou v~průběhu analýzy sbírány statistiky zpracovávaného zdrojového
+    kódu. Na konci analýzy jsou statistiky uloženy do zadaného souboru 
+    \texttt{file} v~pořadí, podle dalších upřesňujících parametrů.
+    
+    Pro každou zaznamenávanou hodnotu je vytvořen číselný čítač, který se 
+    v~průběhu analýzy akumuluje. Při zadání parametru \texttt{-{}-loc} se
+    počítá počet řádků s~instrukcemi. Při zadání parametru \texttt{-{}-comments}
+    se počítá počet komentářů. Při zadání parametru \texttt{-{}-labels} se
+    počítá počet definovaných unikátních návěští. A~při zadání parametru
+    \texttt{-{}-jumps} se počítá počet instrukcí pro podmíněné a nepodmíněné
+    skoky (včetně instrukcí \texttt{CALL} a~\texttt{RETURN}).
+    
+    Pokud je skriptu \texttt{parse.php} předán parametr \texttt{-{}-stats=file},
+    ale nejsou mu předány žádné další parametry, které upřesňují vypisované
+    statistiky, tak se do souboru \texttt{file} nic nevypíše. Pokud jsou
+    naopak předány nějaké upřesňující parametry, ale není předán parametr
+    \texttt{-{}-stats=file}, tak skript skončí s~chybou 10.
 \end{document}
