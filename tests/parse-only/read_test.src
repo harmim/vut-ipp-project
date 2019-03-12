@@ -1,4 +1,6 @@
-.IPPcode19  # nacteni vstupu a vypis
+# bla
+
+.ippcode19  # nacteni vstupu a vypis
 DEFVAR GF@a
 READ GF@a int
 WRITE GF@a

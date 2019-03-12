@@ -1,0 +1,3 @@
+# foo
+DEFVAR GF@a
+READ GF@a int

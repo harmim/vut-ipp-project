@@ -30,7 +30,7 @@ final class IPPcode19Parser
 		IDENTIFIER_SPECIAL_CHARS = '_\-\$&%\*!\?',
 		IDENTIFIER =
 			'(?:[[:alpha:]' . self::IDENTIFIER_SPECIAL_CHARS . '][[:alnum:]' . self::IDENTIFIER_SPECIAL_CHARS . ']*)',
-		TYPE = '(nil|int|bool|string)',
+		TYPE = '(int|bool|string)',
 		VAR = '((?:GF|LF|TF)@' . self::IDENTIFIER . ')',
 		SYMB = '(' . self::CONST . '|' . self::VAR . ')',
 		LABEL = '(' . self::IDENTIFIER . ')';
@@ -117,15 +117,11 @@ final class IPPcode19Parser
 				}
 			}
 
-			$invalidOpcode = true;
+			$invalidOpcode = $parseError = true;
 			foreach (self::INSTRUCTIONS as $opcode => $operands) {
 				if (preg_match('~^\s*' . $opcode . '([^#]*)' . self::COMMENT . '~ui', $line, $m)) {
 					$invalidOpcode = false;
 					$instruction = [];
-
-					if (isset($m[2])) {
-						$comments++;
-					}
 
 					$operandsPattern = '~^';
 					foreach ($operands as $operand) {
@@ -153,9 +149,14 @@ final class IPPcode19Parser
 					$operandsPattern .= '\s*$~u';
 
 					if (!preg_match($operandsPattern, $m[1], $mOperands)) {
-						self::parseError($lineNumber);
+						continue;
 					}
+					$parseError = false;
 					self::removeEmptyStrings($mOperands);
+
+					if (isset($m[2])) {
+						$comments++;
+					}
 
 					$argNumber = $mIndex = 0;
 					foreach ($operands as $operand) {
@@ -206,6 +207,9 @@ final class IPPcode19Parser
 					ReturnCodes::PARSE_UNKNOWN_OPCODE,
 					"Invalid or unknown opcode in source file at line $lineNumber."
 				);
+
+			} elseif ($parseError) {
+				self::parseError($lineNumber);
 			}
 		}
 
@@ -334,8 +338,8 @@ final class IPPcode19Parser
 	 */
 	private static function removeEmptyStrings(array &$array): void
 	{
-		$array = array_values(array_filter($array, function (string $string): bool {
-			return $string !== '';
-		}));
+		$array = array_values(array_filter($array, function (string $value, int $key) use ($array): bool {
+			return $value !== '' || (isset($array[$key - 1]) && $array[$key - 1] === 'string');
+		}, ARRAY_FILTER_USE_BOTH));
 	}
 }
